@@ -6,12 +6,12 @@ from knowrob import *
 class KnowRobKernel(Kernel):
     implementation = 'KnowRob'
     implementation_version = '1.0'
-    language = 'no-op'
+    language = 'prolog'
     language_version = '0.1'
     language_info = {
-        'name': 'echo',
-        'mimetype': 'text/plain',
-        'file_extension': '.txt',
+        'name': 'prolog',  # This tells Jupyter to use the 'prolog' mode in CodeMirror
+        'mimetype': 'text/x-prolog',  # Specify the MIME type for Prolog
+        'file_extension': '.pl',  # Typical Prolog file extension
     }
     banner = "KnowRob Kernel"
 
@@ -63,15 +63,27 @@ class KnowRobKernel(Kernel):
                 variable = substitution[1]
                 term = substitution[2]
                 toReturn = toReturn + str(variable) + " : " + str(term) + ";\n"
+            return toReturn
 
 
-    def do_execute(self, code, silent, store_history=True, user_expressions=None,
-                   allow_stdin=False):
-        print("doexecute")
+    def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
+        if code.startswith('%kr_load_setting'):
+            # Extract the settings JSON string (which comes after the magic command) and sanitize it
+            json_settings_str_help = code[len('%kr_load_setting'):].strip()
+            json_settings_str = ''.join(c for c in json_settings_str_help if c.isprintable())
 
-        # Run the query with the provided code
-        result = self.run_query(code)
-        print(result)
+            # Parse the settings into a dictionary
+            settings_dict = json.loads(json_settings_str)
+            
+            # Convert the dictionary to a JSON string and initialize the KnowledgeBase
+            json_str = json.dumps(settings_dict)
+            self.kb = KnowledgeBase(json_str)
+            
+            # Send confirmation message back to the notebook
+            result = "Settings loaded and KnowledgeBase initialized successfully."
+        else:
+            # Handle queries
+            result = self.run_query(code)
         
         if not silent:
             # Send back the result

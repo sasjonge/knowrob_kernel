@@ -32,10 +32,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jupyter/echo_kernel"
+Homepage = "https://github.com/sasjonge/knowrob_kernel"
 
 [tool.hatch.version]
-path = "echo_kernel/__init__.py"
+path = "knowrob_kernel/__init__.py"
 
 # Used to call hatch_build.py
 [tool.hatch.build.hooks.custom]
@@ -43,7 +43,7 @@ path = "echo_kernel/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/echo_kernel",
+    "/knowrob_kernel",
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
