@@ -1,5 +1,6 @@
 from ipykernel.kernelbase import Kernel
 import json
+import os
 from knowrob import *
 
 class KnowRobKernel(Kernel):
@@ -15,16 +16,20 @@ class KnowRobKernel(Kernel):
     banner = "KnowRob Kernel"
 
     def __init__(self, **kwargs):
+        print("Start Init")
         InitKnowRob()
         # Define the path to the default.json file
         file_path = os.path.expanduser("~/.knowrob/settings/default.json")
         # Check if the file exists
         if os.path.isfile(file_path):
-            kb = KnowledgeBase(file_path)
+            self.kb = KnowledgeBase(file_path)
+            print("Loaded " + file_path)
         else:
-            kb = KnowledgeBase("settings/mongolog.json")
+            self.kb = KnowledgeBase("settings/mongolog.json")
+            print("Loaded settings/mongolog.json")
+        Kernel.__init__(self, **kwargs)
 
-    def run_query(query_string, modalities=None):
+    def run_query(self, query_string, modalities=None):
             # Helper function to perform a query on a knowledge base
         # Load the settings
         if (not modalities):
@@ -38,18 +43,21 @@ class KnowRobKernel(Kernel):
             }
         # Create a formula for the query
         phi = QueryParser.parse(query_string)
+        print("parse")
         # Apply the modality
         mPhi = InterfaceUtils.applyModality(modalities, phi)
+        print("applyModality")
         # Get Result Stream
-        resultStream = kb.submitQuery(mPhi, QueryContext(QueryFlag.QUERY_FLAG_ALL_SOLUTIONS))
+        resultStream = self.kb.submitQuery(mPhi, QueryContext(QueryFlag.QUERY_FLAG_ALL_SOLUTIONS))
+        print("submitQuery")
         resultQueue = resultStream.createQueue()
         # Get the result
         nextResult = resultQueue.pop_front()
         if isinstance(nextResult, AnswerNo):
             return "False"
-        elif isinstance(nextResult, AnswerMaybe):
+        elif isinstance(nextResult, AnswerDontKnow):
             return "Don't Know"
-        elif isinstance(nextResult, AnswerNo):
+        elif isinstance(nextResult, AnswerYes):
             toReturn = ""
             for substitution in nextResult.substitution():
                 variable = substitution[1]
@@ -59,28 +67,21 @@ class KnowRobKernel(Kernel):
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
-        try:
-            # Run the query with the provided code
-            result = self.run_query(code)
-            
-            if not silent:
-                # Send back the result
-                stream_content = {'name': 'stdout', 'text': result}
-                self.send_response(self.iopub_socket, 'stream', stream_content)
+        print("doexecute")
 
-            # Return the result in the format expected by Jupyter
-            return {
-                'status': 'ok',
-                'execution_count': self.execution_count,
-                'payload': [],
-                'user_expressions': {},
-            }
-        except Exception as e:
-            # Handle exceptions and return an error message
-            return {
-                'status': 'error',
-                'execution_count': self.execution_count,
-                'ename': type(e).__name__,
-                'evalue': str(e),
-                'traceback': []
-            }
+        # Run the query with the provided code
+        result = self.run_query(code)
+        print(result)
+        
+        if not silent:
+            # Send back the result
+            stream_content = {'name': 'stdout', 'text': result}
+            self.send_response(self.iopub_socket, 'stream', stream_content)
+
+        # Return the result in the format expected by Jupyter
+        return {
+            'status': 'ok',
+            'execution_count': self.execution_count,
+            'payload': [],
+            'user_expressions': {},
+        }
